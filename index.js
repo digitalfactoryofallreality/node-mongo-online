@@ -4,44 +4,84 @@ const cors = require("cors");
 
 const app = express();
 
-// MIDDLEWARE
+/* =====================
+   MIDDLEWARE
+===================== */
 app.use(cors());
 app.use(express.json());
 
-// ROOT ROUTE (IMPORTANT)
+/* =====================
+   ROOT ROUTE (FIXED)
+===================== */
 app.get("/", (req, res) => {
   res.send("Server is running 🚀");
 });
 
-// MONGODB CONNECT
+/* =====================
+   MONGODB CONNECTION
+===================== */
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch(err => console.error(err));
+  .then(() => {
+    console.log("MongoDB Connected");
+  })
+  .catch((err) => {
+    console.error("MongoDB Error:", err);
+  });
 
-// SCHEMA
-const UserSchema = new mongoose.Schema({
-  name: String,
-  userId: String
+/* =====================
+   USER SCHEMA & MODEL
+===================== */
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  userId: {
+    type: String,
+    required: true,
+  },
 });
 
-const User = mongoose.model("User", UserSchema);
+const User = mongoose.model("User", userSchema);
 
-// GET USERS
+/* =====================
+   ROUTES
+===================== */
+
+// GET all users
 app.get("/users", async (req, res) => {
-  const users = await User.find();
-  res.json(users);
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
 });
 
-// POST USER
+// POST new user
 app.post("/users", async (req, res) => {
-  const user = new User(req.body);
-  await user.save();
-  res.json(user);
+  try {
+    const { name, userId } = req.body;
+
+    if (!name || !userId) {
+      return res.status(400).json({ error: "Name and UserId required" });
+    }
+
+    const user = new User({ name, userId });
+    const savedUser = await user.save();
+
+    res.json(savedUser);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to save user" });
+  }
 });
 
-// START SERVER
+/* =====================
+   START SERVER
+===================== */
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log(`Server running on port ${PORT}`);
 });
